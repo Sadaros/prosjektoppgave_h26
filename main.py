@@ -1,33 +1,81 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from datetime import datetime
 from itertools import count
+from typing import Optional, Protocol
 
 
-class TicketKategorier(Enum): ...
+class TicketKategorier(Enum):
+    MASKINVARE = "Maskinvare"
+    PROGRAMVARE = "Programvare"
+    NETTVERK = "Nettverk"
+    SKRIVER = "Skriver"
+    ANNET = "Annet"
 
 
 class TicketStatus(Enum):
-    aapen = "Åpen"
-    lost = "Løst"
+    AAPEN = "Åpen"
+    UNDER_BEHANDLING = "Under Behandling"
+    LOST = "Løst"
 
 
 @dataclass
 class Ticket:
+    navn: str
     kategori: TicketKategorier
     problem_tittel: str
     problem_tekst: str
-    status: TicketStatus = TicketStatus.aapen
-    opprettet: datetime = field(default_factory=datetime.now)
-    saksnummer: int = field(default_factory=count(1).__next__)
+    status: TicketStatus = TicketStatus.AAPEN
+    opprettet: str = ""
+    saksnummer: Optional[int] = None
+
+    def __post_init__(self):
+        if not self.opprettet:
+            self.opprettet = datetime.now().isoformat(timespec="seconds")
 
 
-def main():
-    ticket_liste: list[Ticket] = []
+class TicketRepo(Protocol):
+    def registrer_ticket(self, ticket: Ticket) -> Ticket: ...
+    def hent_ticket(self, saksnummer: int) -> Optional[Ticket]: ...
+    def alle_tickets(self) -> list[Ticket]: ...
+    def oppdater_ticket(self, ticket: Ticket) -> None: ...
+    def slett_ticket(self, saksnummer: int) -> bool: ...
+
+
+class IMinneRepo:
+    def __init__(self):
+        self._tickets: dict[int, Ticket] = {}
+        self._counter = count(1)
+
+    def registrer_ticket(self, ticket: Ticket) -> Ticket:
+        if ticket.saksnummer is None:
+            ticket.saksnummer = next(self._counter)
+        self._tickets[ticket.saksnummer] = ticket
+        return ticket
+
+    def hent_ticket(self, saksnummer: int) -> Optional[Ticket]:
+        return self._tickets.get(saksnummer)
+
+    def alle_tickets(self) -> list[Ticket]:
+        return list(self._tickets.values())
+
+    def oppdater_ticket(self, ticket: Ticket) -> None:
+        if ticket.saksnummer not in self._tickets:
+            raise KeyError(
+                f"Ticket med saksnummer {ticket.saksnummer} eksisterer ikke."
+            )
+        self._tickets[ticket.saksnummer] = ticket
+
+    def slett_ticket(self, saksnummer: int) -> bool:
+        return self._tickets.pop(saksnummer, None) is not None
+
+
+def kjor_meny(repo: TicketRepo):
 
     print("=" * 24)
     print("IT-HELLDESK".center(24))
     print("=" * 24)
+    print()
 
     while True:
         print("Meny:")
@@ -41,7 +89,8 @@ def main():
         meny_valg = input("Valg:").strip().casefold()
 
         if meny_valg in ("1", "registrer"):
-            ...
+
+            registrer_ny_ticket(repo)
         elif meny_valg in ("2", "liste"):
             ...
         elif meny_valg in ("3", "oppdater"):
@@ -50,11 +99,51 @@ def main():
             ...
         elif meny_valg in ("5", "avslutt"):
             break
-
         else:
             print("Ugyldig menyvalg.")
             continue
 
 
+def registrer_ny_ticket(repo: TicketRepo):
+    print("--- Registrer ny henvendelse ---")
+
+    while True:
+        navn = input("Ditt navn: ").strip()
+        if not navn:
+            print("Navn kan ikke være tomt.")
+            continue
+        break
+
+    kategori = velg_kategori()
+
+    while True:
+        tittel = input("Tittel på henvendelse: ").strip()
+        if not tittel:
+            print("Tittel kan ikke være tom.")
+            continue
+        break
+
+    while True:
+        tekst = input("Beskrivelse på henvendelsen: ").strip()
+        if not tekst:
+            print("Beskrivelse kan ikke være tom.")
+            continue
+        break
+
+    ny = Ticket(
+        navn=navn, kategori=kategori, problem_tittel=tittel, problem_tekst=tekst
+    )
+    lagret = repo.registrer_ticket(ny)
+    print(f"Opprettet henvendelse med saksnummer {lagret.saksnummer}")
+
+
+def velg_kategori() -> TicketKategorier: ...
+
+
+def main() -> None:
+    pass
+
+
 if __name__ == "__main__":
-    main()
+    repo: TicketRepo = IMinneRepo()
+    kjor_meny(repo)
