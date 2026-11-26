@@ -81,7 +81,7 @@ class IMinneRepo:
         return self._tickets.pop(saksnummer, None) is not None
 
 
-def kjor_meny(repo: TicketRepo):
+def meny(repo: TicketRepo):
 
     print("=" * 24)
     print("IT-HELLDESK".center(24))
@@ -102,7 +102,6 @@ def kjor_meny(repo: TicketRepo):
         if meny_valg in ("1", "registrer"):
             registrer_ny_ticket(repo)
         elif meny_valg in ("2", "liste"):
-
             vis_alle_tickets(repo)
         elif meny_valg in ("3", "oppdater"):
             ...
@@ -124,34 +123,32 @@ def vis_alle_tickets(repo: TicketRepo):
         print(t)
 
 
+def krev_ikke_tom_tekst(ledetekst: str, feilmelding: str) -> str:
+    while True:
+        verdi = input(ledetekst).strip()
+        if not verdi:
+            print(feilmelding)
+            continue
+        return verdi
+
+
 def registrer_ny_ticket(repo: TicketRepo):
     print("--- Registrer ny henvendelse ---")
 
-    while True:
-        navn = input("Ditt navn: ").strip()
-        if not navn:
-            print("Navn kan ikke være tomt.")
-            continue
-        break
-
+    navn = krev_ikke_tom_tekst("Ditt navn: ", "Navn kan ikke være tomt.")
     kategori = velg_kategori()
-
-    while True:
-        tittel = input("Tittel på henvendelse: ").strip()
-        if not tittel:
-            print("Tittel kan ikke være tom.")
-            continue
-        break
-
-    while True:
-        tekst = input("Beskrivelse på henvendelsen: ").strip()
-        if not tekst:
-            print("Beskrivelse kan ikke være tom.")
-            continue
-        break
+    tittel = krev_ikke_tom_tekst(
+        "Beskrivende tittel på problem: ", "Tittel kan ikke vøre tom."
+    )
+    tekst = krev_ikke_tom_tekst(
+        "Beksrivelse på henvendelse: ", "Beskrivelse kan ikke være tom."
+    )
 
     ny = Ticket(
-        navn=navn, kategori=kategori, problem_tittel=tittel, problem_tekst=tekst
+        navn=navn,
+        kategori=kategori,
+        problem_tittel=tittel,
+        problem_tekst=tekst,
     )
     lagret = repo.registrer_ticket(ny)
     print(f"Opprettet henvendelse med saksnummer {lagret.saksnummer}")
@@ -161,9 +158,9 @@ def velg_kategori() -> TicketKategorier: ...
 
 
 def main() -> None:
-    pass
+    repo: TicketRepo = IMinneRepo()
+    meny(repo)
 
 
 if __name__ == "__main__":
-    repo: TicketRepo = IMinneRepo()
-    kjor_meny(repo)
+    main()
