@@ -33,6 +33,17 @@ class Ticket:
         if not self.opprettet:
             self.opprettet = datetime.now().isoformat(timespec="seconds")
 
+    def __str__(self) -> str:
+        linjer = [
+            f"Sak #{self.saksnummer or 'Ukjent'}",
+            f"|{self.status.value}|",
+            f"Registrert av: {self.navn}"
+            f"Opprettet: {self.opprettet or 'Ukjent'}"
+            f"Problem: {self.problem_tittel}",
+            f"Beskrivelse: {self.problem_tekst}",
+        ]
+        return "\n".join(linjer)
+
 
 class TicketRepo(Protocol):
     def registrer_ticket(self, ticket: Ticket) -> Ticket: ...
@@ -89,10 +100,10 @@ def kjor_meny(repo: TicketRepo):
         meny_valg = input("Valg:").strip().casefold()
 
         if meny_valg in ("1", "registrer"):
-
             registrer_ny_ticket(repo)
         elif meny_valg in ("2", "liste"):
-            ...
+
+            vis_alle_tickets(repo)
         elif meny_valg in ("3", "oppdater"):
             ...
         elif meny_valg in ("4", "søk"):
@@ -102,6 +113,15 @@ def kjor_meny(repo: TicketRepo):
         else:
             print("Ugyldig menyvalg.")
             continue
+
+
+def vis_alle_tickets(repo: TicketRepo):
+    tickets = repo.alle_tickets()
+    if not tickets:
+        print("Ingen henvendelser registrert.")
+        return
+    for t in tickets:
+        print(t)
 
 
 def registrer_ny_ticket(repo: TicketRepo):
